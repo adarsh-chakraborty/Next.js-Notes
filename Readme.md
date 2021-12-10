@@ -54,6 +54,8 @@ Using the same pages over and over again, with different data & content served t
 
 To create a dynamic page, Change the filename to some identifer between square brackets **[identifer].js** Now next.js can load this file for different values in the page `/someID`. 
 
+**Alternatively,** You can change the folder name to be the identifier `[someId]` and inside the folder, you can have an `index` file. 
+
 #### Extracting the value from URL
 
 To get the user's entered value from the URL, import the `useRouter` hook from package `next/router`
@@ -79,7 +81,9 @@ Explaination:
 
 That's how we can build dynamic pages based on some parameter in the url.
 
-### Navigation
+---
+
+# Navigation
 
 We can use Link component instead of normal anchor tags, Link component prevents the browser default of refreshing page.
 
@@ -97,5 +101,54 @@ Explaination:
 - import `Link` component from `next/link` as default.
 - Use the Link component instead of anchor tag. It even has a `href` prop for url.
 - Link renders an anchor element in html but without re-loading the page.
+
+### Programmatic Navigation
+
+We can navigate the user to some place Programmatically by using `useRouter` hook.
+
+```javascript
+import { useRouter } from 'next/router';
+
+function MeetupItem(props) {
+  const router = useRouter();
+  const showDetailsHandler = () => {
+    router.push('/'+props.id);
+  }
+  return ();
+}
+
+export default MeetupItem;
+```
+
+`router.push('/some-path')` pushes a new link to navigation stack just like `Link` component.
+
+---
+# _app.js file
+
+There exists a file named `_app.js` in `pages` folder, It's a special file.
+
+It's a kind of root component that nextjs will render, It uses props to receive data and destructure them to pull information out of props. i.e `{ Component, pageProps }`
+
+- Component prop is the page that is rendered, so it will be different for each page.
+- pageProps are specific props that our page might be getting.
+
+Now we know that _app.js is the actual page content for our app, and It will change from pageA to pageB.
+
+If we have any central layout for our entire app, It's the best place to wrap the entire app with a layout component.
+
+```javascript
+import '../styles/globals.css';
+import Layout from '../components/layout/Layout';
+
+function MyApp({ Component, pageProps }) {
+  return (
+    <Layout>
+      <Component {...pageProps} />
+    </Layout>
+  );
+}
+
+export default MyApp;
+```
 
 
