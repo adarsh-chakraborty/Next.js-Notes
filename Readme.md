@@ -150,5 +150,120 @@ function MyApp({ Component, pageProps }) {
 
 export default MyApp;
 ```
+---
+# Pre-rendering in Next.js
 
+In a typical react app, We would use `useEffect` and manage some state using `useState` hook to fetch data from a server.
+
+Next.js has built-in pre-rendering but this **default built-in** pre-rendering has a problem. 
+Suppose, we have a pre-rendered page on a server, and a user request it, we might be missing some data here.
+
+So whist this is theoretically good for SEO and static site, It's not good for site which frequently changes. So we need to configure some things to fine tune it.
+
+**How Pre-rendering works**
+```
+Request --> /some-route --> return [prerendered-page]
+```
+
+After the user receives the pre-rendered page the page is `hydrated` as this process is called which means now react will turn this into a Single Page Applciation and take over control. 
+
+Then, all the the normal things in react like `useEffect` would execute after the page is received on the browser and not on server.
+
+### Next.js gives us two forms of Pre-rendering
+
+- Static generation (SSG)
+- Server-side Rendering (SSR)
+
+These two might sound similar but they are different and runs at different points of time.
+
+#### Static generation (SSG)
+
+With Static Generation, Page component is pre-rendered during build time, When built for Production.
+
+That means, After deployment that pre-rendered would not change, atleast not by default. It's recommended for static sites.
+
+**By default** Next.js generates your site statically on build time but if you need to add fetching to your site, we can do so by exporting a special function in our page component files.
+
+**This only works in page component files not in other normie components**
+
+The special function is called `getStaticProps()`, It's a reserved name for Next.js pre-rendering process.
+During build time, Next.js will look for this function name and execute it during the pre-rendering process.
+
+So the `getStaticProps()` function is first executed before executing the page component.
+
+*`getStaticProps` is allowed to be asynchronous, means it can return a promise*
+
+```javascript
+export async function getStaticProps() {}
+```
+
+Next.js will wait till the promise is resolved, and when the data is loaded, it will generate the html files including the props.
+
+`getStaticProps` runs on the server, that means we can securely connect to a database or access to file system as well.
+
+Because, as it is executed on build time, It never reaches the server, not specially on client side. So we can fetch data/connect to database etc.
+
+- Once getStaticProps() has the required props, it always needs to return an object with a property `props`.
+- the props property holds another object, which is you receive in the page component function in the end.
+- in the props object, we can have all the data we need in our page component.
+
+```javascript
+import MeetupList from '../components/meetups/MeetupList';
+
+import { useState, useEffect } from 'react';
+const DUMMY_MEETUPS = [
+  {
+    id: 'm1',
+    title: 'A First Meetup',
+    image: 'https://source.unsplash.com/1600x900/?landscape',
+    address: 'Some address Not Native',
+    description: 'This is the place decided for meetup!'
+  }
+];
+
+function HomePage(props) {
+  // props has the data from getStaticProps
+  return <MeetupList meetups={props.meetups} />;
+}
+
+export async function getStaticProps() {
+  // consume an api or connect to database
+  return {
+    props: {
+      meetups: DUMMY_MEETUPS
+    }
+  };
+}
+
+export default HomePage;
+```
+
+Now, bots can find the data on our site for SEO optimization.
+
+### Re-validating static site 
+
+There's a problem with our current approach, that is after building, the data is never changed. The data might get outdated and we have to build and re-deploy the site again to make the changes available to visitors.
+Thankfully, there's another feature in Next.js SSG
+
+The object we returned in `getStaticProps`, we can add a key named `revalidate` and set it's value to a number.
+
+When we do it, We unlock a new feature in Next.js.  
+**\- Revalidating data**
+
+What it does, Next.js waits till the number of seconds and then re-builds the pages if requests are coming for this page after deployment.
+
+So we don't have to re-build and re-deploy manually all the time just because some data has  changed.
+
+```javascript
+export async function getStaticProps() {
+  // consume an api or connect to database
+  return {
+    props: {
+      meetups: DUMMY_MEETUPS
+    },
+    // Revalidate every 10 seconds
+    revalidate: 10
+  };
+}
+```
 
