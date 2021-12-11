@@ -176,7 +176,7 @@ Then, all the the normal things in react like `useEffect` would execute after th
 
 These two might sound similar but they are different and runs at different points of time.
 
-#### Static generation (SSG)
+## Static generation (SSG)
 
 With Static Generation, Page component is pre-rendered during build time, When built for Production.
 
@@ -266,4 +266,110 @@ export async function getStaticProps() {
   };
 }
 ```
+---
+## Server Side Rendering (SSR)
+
+So get `getStaticProps()` is a very important function in Next.js to ensure we feed some data to the pre-rendered pages, Now with revalidate, we can ensure that the pages are updated periodically  after depolyment.
+
+But, sometimes even regular updates are not enough, Sometimes we really need to pre-generate the page on every request on the fly, after depolyment on the server.
+
+Not periodically, not during the build process, If that is your goal then there's a better alternative we have.
+
+
+There's another function we get export, which can again be asynchronous, that is `getServerSideProps()`.
+```javascript
+export async function getServerSideProps(context) {
+  const req = context.req;
+  const res = context.res;
+
+  // fetch data
+  return {
+    props: {
+      meetups: DUMMY_MEETUPS
+    }
+  }
+}
+```
+
+This function will not run during build process but instead always on the server, on every request, after depolyment.
+
+As `getServerSideProps()` is executed on every request, we actually have access to the request and response through props. More on it later...
+
+---
+
+### Static Site Generation vs Server Side Rendering  
+
+Okay so, now we know about SSG and SSR, so which one is better? and which one should we use? and when?
+
+Can we use both at the same time? Nope
+
+Server side Rendering might sound better but actually it has an disadvantage, We're waiting for the page to generate at every request which can actually slow down your overall response time.
+
+So we should only use SSR when there are multiple changes occuring at every second and even revalidate cannot help us or we need to access request object on every request for some reason *e.g. authentication*.
+
+Conclusion: To take advantage of Caching having pre-rendered pages is alot better because rendering them on every request can slow down response time.
+
+---
+
+### Working with Params in SSG and SSR 
+
+To fetch data, It might need some identifier, specially for dynamic routes, We canot use react hooks like `useRouter` in getProps functions.
+
+Instead, we can take help of the context object which is received in these function, there we can access the params property.
+
+```javascript
+export function getStaticProps(context){
+  const meetupId = context.params.meetupId;
+  // Where meetupId is the Identifer. [meetupId].js
+  use meetupId 
+}
+```
+
+With only that, we would end up with SSG error, that `getStaticPaths` is required.
+
+`getStaticPaths` is a function we need to export in a Page component file, if it's a dynamic page and we are using `getStaticProps`.
+
+In that case, we need to export another function here, in the page component file. It can also be asynchronous.
+
+```javascript
+export async function getStaticPaths() {}
+```
+**Why we need this?**
+
+Because, with Dynamic routes, we need to pre-generate pages for all versions of supported Ids, If we don't pre-generate the page for them, they will see a 404 page error.
+
+So we need to have an function like getStaticPaths(), which has the job of returning an object where we describe dynamic segment values.
+
+```javascript
+export async function getStaticPaths() {
+  return {
+    fallback: false,
+    paths: [
+      {
+        params: {
+          // all key value pairs which leads to ur dynamic page
+          meetupId: 'm1',
+        }
+      },
+      {
+        params: {
+          meetupId: 'm2',
+        }
+      },
+    ]
+  }
+}
+```
+
+The object must hold a property named `paths` and the value of it should be an Array. An Array of Objects to be specific, 1 Object per version of this dynamic page.
+
+Each object inside the array must hold a params key, and the value of the param key must be an object. It will contain all the key-value pairs which leads to your dynamic page. (Suppose you have nested dynamic routing)
+
+**fallback:** The fallback key tells if we have all the supported values in the array or just some of them.
+
+If set to `false`, It will throw a 404 page.
+If set to `true`, NextJS will try to generate a page for this meetupId dynamically on the server on the incoming request.
+
+It's a nice feature to pre-generate some of the pages, for example, frequently visited pages and will pre-generate the missing ones dynamically.
+
 
