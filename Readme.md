@@ -372,4 +372,65 @@ If set to `true`, NextJS will try to generate a page for this meetupId dynamical
 
 It's a nice feature to pre-generate some of the pages, for example, frequently visited pages and will pre-generate the missing ones dynamically.
 
+---
+
+# Introducing API Routes
+
+Next.js makes it easy for us to build an API together with our frontend react app in the same project.
+
+For this, We can use another key Next.js feature called API Routes.
+
+#### API Routes 
+
+API Routes are special routes, special pages which don't return html code but Instead, It's about accepting Http requests.
+
+So basically, API routes allows us to build API Endpoints as part of this Next.js project and they will be served by the same server as Next.js app.
+
+### Getting started with API Routes
+
+First we need to created a folder named `api`, inside the pages folder. Just like `pages` folder, It's a reserved name to make api end points recognized by next js.
+
+Next.js picks up any javascript files in the `api` folder and turn those files into API Endpoints which can be targetted by requests which can receive and send JSON data.
+
+- Create a javascript file in the `api` folder which lies inside `pages` folder.
+- In the javascript file, we don't work with react components, It's not about rendering or defining components.
+- Instead in the file, we define functions that contains server side code, as it gets executed on the server.
+- This code never gets exposed to the client.
+- The function name can be anything but the important thing is to export it.
+- Req and Res object will be passed to the function on every request.
+- We can check the method, body or anything with the request object.
+
+```javascript
+// pages > api > new-meetup.js
+function handler(req,res) {
+    if (req.method === 'POST') {
+        const data = req.body;
+        const { title, image, address, description } = data;
+    }
+}
+export default handler;
+```
+
+Now we can connect to a database here, Let's connect to a mongodb server.
+
+```javascript
+import {MongoClient} from 'mongodb';
+
+async function handler(req,res){
+
+    const client = await MongoClient.connect("mongodb+srv://username:<password>@cluster0.mongodb.net/myDatabaseName?retryWrites=true&w=majority");
+    const db = client.db();
+
+    const collectionName = db.collection('collectionName');
+
+    const result = await collectionName.insertOne({req.data});
+
+    client.close();
+    res.status(201).json({message: 'Meetup Inserted'});
+}
+```
+
+
+
+
 
