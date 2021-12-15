@@ -430,6 +430,71 @@ async function handler(req,res){
 }
 ```
 
+## Sending http requests to our API Routes
+
+It's same as sending http request to any api route for example built-in fetch function or axios.
+
+```javascript
+import { useRouter } from 'next/router';
+
+function NewMeetupPage(){
+    const router = useRouter();
+    const meetupHandler = async (enteredMeetupData) => {
+    const response = await fetch('/api/new-meetup', {
+      method: 'POST',
+      body: JSON.stringify(enteredMeetupData),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+    console.log(data);
+    // router.replace('/'); // Disables back button.
+    router.push('/');
+  };
+}
+```
+
+## Getting data from Database
+
+Connecting to mongodb and get all the meetups
+
+```javascript
+import { MongoClient } from 'mongodb';
+
+export async function getStaticProps() {
+  // consume an api or connect to database
+  const client = await MongoClient.connect(process.env.MONGODB_URI);
+  const db = client.db();
+
+  const meetupsCollection = db.collection('meetups');
+
+  const meetups = await meetupsCollection.find().toArray();
+
+  client.close();
+  return {
+    props: {
+      meetups: meetups.map((meetup) => ({
+        title: meetup.title,
+        address: meetup.address,
+        image: meetup.image,
+        id: meetup._id.toString()
+      }))
+    },
+    revalidate: 10
+  };
+}
+```
+
+### Some notes: 
+
+- If we import something that is only used in `getServerSideProps` or `getStaticProps`,It will not be a part of client side bundle.
+- So depending on where you use it, Next.js will detect it automatically and exclude it from client bundle.
+- We can use fetch() in Next.js server side code, Next.js supports it. Normally it's only avaiable on browsers.
+- But sending fetch() requests to our own API is a bit cumbersome, we can directly write the code to connect to database and fetch required data.
+- Why? Sending http request to our own API will end up connecting to database in the end and we have to wait for response. Which is redundant.
+
 
 
 
