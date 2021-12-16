@@ -418,7 +418,7 @@ import {MongoClient} from 'mongodb';
 
 async function handler(req,res){
 
-    const client = await MongoClient.connect("mongodb+srv://username:<password>@cluster0.mongodb.net/myDatabaseName?retryWrites=true&w=majority");
+    const client = await MongoClient.connect(process.env.MONGODB_URI);
     const db = client.db();
 
     const collectionName = db.collection('collectionName');
@@ -494,6 +494,107 @@ export async function getStaticProps() {
 - We can use fetch() in Next.js server side code, Next.js supports it. Normally it's only avaiable on browsers.
 - But sending fetch() requests to our own API is a bit cumbersome, we can directly write the code to connect to database and fetch required data.
 - Why? Sending http request to our own API will end up connecting to database in the end and we have to wait for response. Which is redundant.
+
+---
+
+## Getting single item from database and passing props
+
+Directly connecting to db to pre-render the pages.
+
+Changed fallback to `blocking` so if a page is not available, it will try to generate it on the fly.
+
+**Possible fallback values:**
+- `false` It will directly send a 404 page.
+- `true` sends a black page, and try to generate the page. We have to handle the case. 
+- `blocking` Request is awaited till it tries to pre-render and serves the generated page. (No extra work required!)
+
+```javascript
+import MeetupDetails from '../../components/meetups/MeetupDetail';
+import { MongoClient, ObjectId } from 'mongodb';
+
+function MeetupDetailsPage(props) {
+  const meetup = props.meetupData;
+  console.log(props);
+  return (
+    <MeetupDetails
+      src={meetup.image}
+      address={meetup.address}
+      title={meetup.title}
+      details={meetup.details}
+    />
+  );
+}
+
+export async function getStaticProps(context) {
+  // fetch data for single meetup
+  const meetupId = context.params.meetupId;
+
+  const client = await MongoClient.connect(process.env.MONGODB_URI);
+  const db = client.db();
+
+  const meetupsCollection = db.collection('meetups');
+  console.log('trying to find with meetupId: ', meetupId);
+  const meetupData = await meetupsCollection.findOne({
+    _id: ObjectId(meetupId)
+  });
+  console.log(meetupData);
+  client.close();
+
+  return {
+    props: {
+      meetupData: {
+        _id: meetupData._id.toString(),
+        title: meetupData.title,
+        address: meetupData.address,
+        image: meetupData.image,
+        description: meetupData.description
+      }
+    }
+  };
+}
+
+export async function getStaticPaths() {
+  const client = await MongoClient.connect(process.env.MONGODB_URI);
+  const db = client.db();
+
+  const meetupsCollection = db.collection('meetups');
+  const meetups = await meetupsCollection.find({}, { _id: 1 }).toArray();
+  client.close();
+  return {
+    fallback: 'blocking',
+    paths: meetups.map((meetup) => ({
+      params: { meetupId: meetup._id.toString() }
+    }))
+  };
+}
+export default MeetupDetailsPage;
+```
+
+## Adding Meta data
+
+Adding Meta data to pages is fairly simple with Next.js.
+
+First, we need to important a component named `Head` from `next/head`. It's a special component offered by Next.js
+and then inside the Head component, we can write all our meta data like title, description etc.
+
+```javascript
+import Head from 'next/head';
+function HomePage(props) {
+  return (
+    <>
+      <Head>
+        <title>React Meetups</title>
+      </Head>
+      <MeetupList meetups={props.meetups} />
+    </>
+  );
+}
+```
+
+## Deploying to Vercel
+
+Deploying next.js project is simple with vercel, just connect to github, and deploy the branch.
+
 
 
 
